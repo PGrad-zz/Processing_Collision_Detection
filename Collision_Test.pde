@@ -2,7 +2,7 @@
 ArrayList<Ball> balls;
 
 void setup() {
-  size(1000, 1000);
+  size(3000, 2000);
   balls = new ArrayList<Ball>();
   for (int i = 0; i < 20; ++i)
     balls.add(create_ball());
@@ -12,10 +12,12 @@ PVector rainbow() {
   return new PVector(random(256), random(256), random(256));
 }
 
+float gFriction = 1.;
+
 abstract class Shape {
   protected float m_x = 0;
   protected float m_y = 0;
-  protected float m_speed = random(.8, 1.) * 5.;
+  protected float m_speed = constrain((randomGaussian() + 3.) * 2., 0., 12.);
   protected PVector m_vDir = new PVector(random(1.), random(1.)).normalize();
   protected PVector m_color;
   
@@ -48,6 +50,7 @@ abstract class Shape {
 }
 
 class Ball extends Shape {
+  public Ball lastHit = null;
   private float m_radius = 12.5;
   
   public float Radius() {
@@ -74,7 +77,17 @@ class Ball extends Shape {
     return (new PVector(m_x - ball.X(), m_y - ball.Y())).normalize();
   }
   
-  public void ricochet(Ball other) { m_vDir.add(collideDirection(other)).normalize(); }
+  public void reflect(Ball other) {
+    PVector collideDir = collideDirection(other);
+    m_vDir = collideDir.mult(2 * collideDir.dot(m_vDir)).sub(m_vDir);
+    m_speed *= gFriction;
+  }
+  
+  public void swapVelocity(Ball other) {
+    float tmp = m_speed;
+    m_speed = other.Speed();
+    other.setSpeed(tmp);
+  }
 }
 
 Ball create_ball() {
@@ -85,8 +98,15 @@ Ball create_ball() {
   return ball;
 }
 
+void fps_counter() {
+
+}
+
 void draw() {
   background(64);
+  
+  for (Ball ball : balls)
+    ball.lastHit = null;
   
   for (Ball ball : balls) {
     ball.move();
@@ -97,7 +117,16 @@ void draw() {
        }
         
        if (ball.collide(other)) {
-         ball.ricochet(other);
+         // Simulate an elastic collision with
+         // equal-mass objects by swapping velocities
+         // and having the ball reflect along the collision direction.
+         ball.reflect(other);
+         // If we swap velocities twice we wind up with the initial
+         // velocities.
+         if (other.lastHit != ball) {
+           ball.swapVelocity(other);
+           ball.lastHit = other;
+         }
        }
     }
     
