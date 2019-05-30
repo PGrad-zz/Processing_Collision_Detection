@@ -4,7 +4,7 @@ ArrayList<Ball> balls;
 void setup() {
   size(3000, 2000);
   balls = new ArrayList<Ball>();
-  for (int i = 0; i < 20; ++i)
+  for (int i = 0; i < 400; ++i)
     balls.add(create_ball());
 }
 
@@ -13,6 +13,36 @@ PVector rainbow() {
 }
 
 float gFriction = 1.;
+
+class FrameTime {
+  int lastTime = 0;
+  
+  int avg = 0;
+  
+  int sampleFrameSize = 60;
+  int samples = 0;
+  
+  float sum = 0.;
+  
+  int getFrameTime() {
+    int time = millis();
+    int interval = time - lastTime;
+    
+    lastTime = time;
+    
+    sum += interval;
+    
+    if (samples++ == sampleFrameSize) {
+      samples = 0;
+      avg = int(sum / sampleFrameSize);
+      sum = 0.;
+    }
+    
+    return avg;
+  }
+}
+
+FrameTime gFrameTime = new FrameTime();
 
 abstract class Shape {
   protected float m_x = 0;
@@ -98,20 +128,26 @@ Ball create_ball() {
   return ball;
 }
 
-void fps_counter() {
-
+void show_text(String str, float x, float y) {
+  textSize(24);
+  fill(255, 255, 255);
+  text(str, x, y);
 }
 
-void draw() {
-  background(64);
+void frame_counter() {
+  String count = String.format("%02d ms", gFrameTime.getFrameTime());
   
-  for (Ball ball : balls)
-    ball.lastHit = null;
+  show_text(count, width - 100, height - 50);
+}
+
+void draw_balls() {
+   for (Ball ball : balls)
+     ball.lastHit = null;
   
-  for (Ball ball : balls) {
-    ball.move();
+   for (Ball ball : balls) {
+     ball.move();
     
-    for (Ball other : balls) {
+     for (Ball other : balls) {
        if (other == ball) {
          continue;
        }
@@ -132,4 +168,12 @@ void draw() {
     
     ball.drawme();
   }
+}
+
+void draw() {
+  background(64);
+  
+  draw_balls();
+  
+  frame_counter();
 }
