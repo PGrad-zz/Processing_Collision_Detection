@@ -4,7 +4,7 @@ ArrayList<Ball> balls;
 void setup() {
   size(3000, 2000);
   balls = new ArrayList<Ball>();
-  for (int i = 0; i < 2000; ++i)
+  for (int i = 0; i < 200; ++i)
     balls.add(create_ball());
 }
 
@@ -42,9 +42,34 @@ class FrameTime {
   }
 }
 
+class KineticEnergy {
+  int avg = 0;
+  
+  int sampleFrameSize = 5;
+  int samples = 0;
+  
+  float sum = 0.;
+  
+  void addEnergy(float energy) {
+    sum += energy;
+  }
+  
+  float getEnergy() {
+    if (++samples == sampleFrameSize) {
+        samples = 0;
+        avg = int(sum / sampleFrameSize);
+        sum = 0.;
+     }
+      
+    return avg;
+  }
+}
+
 QuadTree tree = new QuadTree();
 
 FrameTime gFrameTime = new FrameTime();
+
+KineticEnergy gEnergy = new KineticEnergy();
 
 class QNode {
   // Divide into four quadrants, going
@@ -341,6 +366,16 @@ void frame_counter() {
   show_text(count, width - 100, height - 50);
 }
 
+void energy_counter() {
+  String count = String.format("%.2f J", gEnergy.getEnergy());
+  
+  show_text(count, width - 300, height - 50);
+}
+
+void count_energy(Shape shape) {
+  gEnergy.addEnergy(.5 * shape.Speed() * shape.Speed());
+}
+
 void draw_balls() {
    tree.clear();
    
@@ -350,7 +385,9 @@ void draw_balls() {
    }
   
    for (Ball ball : balls) {
-     for (Shape shape : tree.retrieve(ball)) {
+     ArrayList<Shape> others = tree.retrieve(ball);
+     println(others.size());
+     for (Shape shape : others) {
        Ball other = (Ball) shape;
        if (ball.collide(other)) {
          // Simulate an elastic collision with
@@ -363,8 +400,10 @@ void draw_balls() {
            ball.swapVelocity(other);
            ball.lastHit = other;
          }
+        }
       }
-    }
+    
+    count_energy(ball);
     
     ball.move();
     
@@ -395,7 +434,9 @@ void draw_balls_unopt() {
          
          fill(255, 255, 255);
        }
-    }
+     }
+    
+    count_energy(ball);
     
     ball.move();
     
@@ -409,4 +450,6 @@ void draw() {
   draw_balls();
   
   frame_counter();
+  
+  energy_counter();
 }
